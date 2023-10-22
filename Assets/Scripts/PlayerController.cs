@@ -7,17 +7,16 @@ using UnityEngine.UI;
 public class PlayerController : MonoBehaviour
 {
     const int MOVEMENT_SPEED = 2;
+    const int FOCUS_RANGE = 5;
 
     private Rigidbody rb;
-    private enum PlayerMode 
-    {
-        Free,
-        LockedOnTarget
-    }
 
-    PlayerMode playerMode = PlayerMode.Free;
+    private KeyCode KeyCodeFocus = KeyCode.Joystick1Button0;
 
     private GameObject lockedOnTarget = null;
+
+    // Stored properties, as working with actual properties might feel sluggish
+    private Vector3 targetDirection;
 
     private void Awake()
     {
@@ -30,37 +29,40 @@ public class PlayerController : MonoBehaviour
 
     }
 
-    // Update is called once per frame
-    void FixedUpdate()
+    private void Update()
     {
-        UpdateMovement();
-
-        if (Input.GetKeyDown(KeyCode.Tab)) 
+        if (Input.GetKeyDown(KeyCodeFocus))
         {
-            List<Collider> colliders = Physics.OverlapSphere(transform.position, 10)
+            List<Collider> colliders = Physics.OverlapSphere(transform.position, FOCUS_RANGE)
                 .ToList()
-                .Where(x => x.gameObject.tag != "Player")
+                .Where(x => x.gameObject.tag != "Player" && x.gameObject.tag != "Terrain")
                 .ToList();
 
-            // TODO: Don't choose the closest object, but instead the first object that is in the line of sight of the player
-            lockedOnTarget = GetClosestGameObjectToTarget(colliders, transform.position);
-
-            if (lockedOnTarget != null) 
+            var objectsFacingPlayer = FilterOnFacing(colliders, transform.position, transform.forward);
+            // if there are objects in front of the player, only process those
+            if (objectsFacingPlayer.Count > 0) 
             {
-                playerMode = PlayerMode.LockedOnTarget;
-            }       
+                colliders = objectsFacingPlayer;
+            }
+            colliders = SortOnDistance(colliders, transform.position);
+
+            lockedOnTarget = colliders.FirstOrDefault()?.gameObject;             
         }
-        if (Input.GetKeyUp(KeyCode.Tab)) 
+        if (Input.GetKeyUp(KeyCodeFocus))
         {
             lockedOnTarget = null;
-
-            playerMode = PlayerMode.Free;
         }
 
-        if (Input.GetKey(KeyCode.Tab))
-        {            
+        if (Input.GetKey(KeyCodeFocus))
+        {
             if (lockedOnTarget != null)
             {
+                if (Vector3.Distance(transform.position, lockedOnTarget.transform.position) > FOCUS_RANGE) 
+                {
+                    lockedOnTarget = null;
+                    return;
+                }
+
                 Vector3 directionToTarget = lockedOnTarget.transform.position - transform.position;
                 directionToTarget.y = 0;
                 Quaternion rotationToTarget = Quaternion.LookRotation(directionToTarget);
@@ -70,7 +72,13 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private GameObject GetClosestGameObjectToTarget(List<Collider> colliders, Vector3 target)
+    // Update is called once per frame
+    void FixedUpdate()
+    {
+        UpdateMovement();
+    }
+
+    private List<Collider> SortOnDistance(List<Collider> colliders, Vector3 target)
     {
         colliders.Sort((a, b) =>
         {
@@ -78,7 +86,14 @@ public class PlayerController : MonoBehaviour
             float distanceB = Vector3.Distance(b.gameObject.transform.position, target);
             return distanceA.CompareTo(distanceB);
         });
-        return colliders.FirstOrDefault()?.gameObject;
+        return colliders;
+    }
+
+    private List<Collider> FilterOnFacing(List<Collider> colliders, Vector3 target, Vector3 forward)
+    {
+        return colliders.Where(x =>
+            Vector3.Dot((x.gameObject.transform.position - target).normalized, forward) > 0.2f
+        ).ToList();
     }
 
     private List<Vector3> inputHistory = new List<Vector3>();
@@ -100,11 +115,21 @@ public class PlayerController : MonoBehaviour
             // take the average of the last couple of inputs
             var averageTargetPosition = CalculateAverageVector(inputHistory);
 
-            // Define and set rotation
-            Quaternion targetRotation = Quaternion.LookRotation(averageTargetPosition);
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10 * Time.deltaTime);
+            // set rotation         
+            if (lockedOnTarget != null)
+            {
+                Vector3 directionToTarget = lockedOnTarget.transform.position - transform.position;
+                directionToTarget.y = 0;
+                Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10 * Time.deltaTime);
+            }
+            else 
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(averageTargetPosition);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10 * Time.deltaTime);
+            }
 
-            // Define and set position
+            // set position
             var target = transform.position + averageTargetPosition * MOVEMENT_SPEED * Time.deltaTime;
             rb.MovePosition(target);
         }
