@@ -469,6 +469,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f61d2008a6ef55b47b9d9d52983cec42, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  inputAction:
+    m_Name: Input
+    m_Type: 0
+    m_ExpectedControlType: 
+    m_Id: 37135a04-2150-4ce5-aeb3-962b868ec48b
+    m_Processors: 
+    m_Interactions: 
+    m_SingletonActionBindings: []
+    m_Flags: 0
+  uiTargetIndicator: {fileID: 9072473042239374673, guid: 5b4c87fd69cfe664696bc588f74d45dd, type: 3}
 --- !u!54 &5402641744501388186
 Rigidbody:
   m_ObjectHideFlags: 0

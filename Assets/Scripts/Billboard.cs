@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class HPController : MonoBehaviour
+public class Billboard : MonoBehaviour
 {
     // Update is called once per frame
     void LateUpdate()

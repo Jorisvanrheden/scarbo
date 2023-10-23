@@ -2,21 +2,23 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
     const int MOVEMENT_SPEED = 2;
     const int FOCUS_RANGE = 5;
 
+    // REFERENCES
     private Rigidbody rb;
 
-    private KeyCode KeyCodeFocus = KeyCode.Joystick1Button0;
-
     private GameObject lockedOnTarget = null;
+    private GameObject lockedOnIndicator = null;
 
-    // Stored properties, as working with actual properties might feel sluggish
-    private Vector3 targetDirection;
+    /** 
+     * Move this code to a different module, or at least not have the player be the placeholder for all these 
+     * properties. They don't belong here, but for now it's okay
+     */
+    public GameObject uiTargetIndicator;
 
     private void Awake()
     {
@@ -29,9 +31,46 @@ public class PlayerController : MonoBehaviour
 
     }
 
+    private enum AxisStatus 
+    {
+        Down,
+        Pressed,
+        Released,
+        Idle
+    }
+
+    private bool isBumperPressed = false;
+
+    private AxisStatus GetAxisStatus(string axis) 
+    {
+        if (Input.GetAxisRaw(axis) != 0)
+        {
+            if (!isBumperPressed)
+            {
+                isBumperPressed = true;
+                return AxisStatus.Pressed;
+            }
+            else
+            {
+                return AxisStatus.Down;
+            }
+        }
+        else 
+        {
+            if (isBumperPressed)
+            {
+                isBumperPressed = false;
+                return AxisStatus.Released;
+            }
+        }
+        return AxisStatus.Idle;
+    } 
+
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCodeFocus))
+        var bumper = GetAxisStatus("Bumper");
+
+        if (bumper == AxisStatus.Pressed)
         {
             List<Collider> colliders = Physics.OverlapSphere(transform.position, FOCUS_RANGE)
                 .ToList()
@@ -40,26 +79,31 @@ public class PlayerController : MonoBehaviour
 
             var objectsFacingPlayer = FilterOnFacing(colliders, transform.position, transform.forward);
             // if there are objects in front of the player, only process those
-            if (objectsFacingPlayer.Count > 0) 
+            if (objectsFacingPlayer.Count > 0)
             {
                 colliders = objectsFacingPlayer;
             }
             colliders = SortOnDistance(colliders, transform.position);
 
-            lockedOnTarget = colliders.FirstOrDefault()?.gameObject;             
-        }
-        if (Input.GetKeyUp(KeyCodeFocus))
-        {
-            lockedOnTarget = null;
+            var target = colliders.FirstOrDefault()?.gameObject;
+            if (target != null) 
+            {
+                SelectLockedOnTarget(target);
+            }       
         }
 
-        if (Input.GetKey(KeyCodeFocus))
+        if (bumper == AxisStatus.Released)
+        {
+            DeselectLockedOnTarget();
+        }
+
+        if (bumper == AxisStatus.Down)
         {
             if (lockedOnTarget != null)
             {
-                if (Vector3.Distance(transform.position, lockedOnTarget.transform.position) > FOCUS_RANGE) 
+                if (Vector3.Distance(transform.position, lockedOnTarget.transform.position) > FOCUS_RANGE)
                 {
-                    lockedOnTarget = null;
+                    DeselectLockedOnTarget();
                     return;
                 }
 
@@ -70,6 +114,22 @@ public class PlayerController : MonoBehaviour
                 transform.rotation = Quaternion.Slerp(transform.rotation, rotationToTarget, 10 * Time.deltaTime);
             }
         }
+    }
+
+    private void SelectLockedOnTarget(GameObject gameObject) 
+    {
+        lockedOnTarget = gameObject;
+
+        lockedOnIndicator = Instantiate(uiTargetIndicator, lockedOnTarget.transform);
+    }
+    private void DeselectLockedOnTarget()
+    {
+        lockedOnTarget = null;
+        if (lockedOnIndicator != null) 
+        {
+            Destroy(lockedOnIndicator);
+            lockedOnIndicator = null;
+        }       
     }
 
     // Update is called once per frame
@@ -138,6 +198,8 @@ public class PlayerController : MonoBehaviour
     private Vector3 GetInput()
     {
         Vector3 input = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"));
+
+        //print(inputActionReference.action.ReadValue<Vector2>());
 
         // Normalize input to prevent diagonal values (only for non-controller inputs)
         if (Math.Abs(input.x) == 1 || Math.Abs(input.z) == 1)
