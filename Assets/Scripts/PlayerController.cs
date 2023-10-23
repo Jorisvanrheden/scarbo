@@ -5,14 +5,25 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
+    /**
+     * Constants
+     */
     const int MOVEMENT_SPEED = 2;
-    const int FOCUS_RANGE = 5;
+    const int FOCUS_RANGE = 30;
 
-    // REFERENCES
+    /**
+     * References
+     */
     private Rigidbody rb;
 
+    /**
+     * Local variables
+     */
     private GameObject lockedOnTarget = null;
     private GameObject lockedOnIndicator = null;
+
+    private Quaternion targetQuaternion;
+
 
     /** 
      * Move this code to a different module, or at least not have the player be the placeholder for all these 
@@ -77,7 +88,7 @@ public class PlayerController : MonoBehaviour
                 .Where(x => x.gameObject.tag != "Player" && x.gameObject.tag != "Terrain")
                 .ToList();
 
-            var objectsFacingPlayer = FilterOnFacing(colliders, transform.position, transform.forward);
+            var objectsFacingPlayer = FilterOnFacing(colliders, transform.position, this.targetQuaternion * Vector3.forward);
             // if there are objects in front of the player, only process those
             if (objectsFacingPlayer.Count > 0)
             {
@@ -109,9 +120,8 @@ public class PlayerController : MonoBehaviour
 
                 Vector3 directionToTarget = lockedOnTarget.transform.position - transform.position;
                 directionToTarget.y = 0;
-                Quaternion rotationToTarget = Quaternion.LookRotation(directionToTarget);
 
-                transform.rotation = Quaternion.Slerp(transform.rotation, rotationToTarget, 10 * Time.deltaTime);
+                SetRotation(Quaternion.LookRotation(directionToTarget));
             }
         }
     }
@@ -152,7 +162,7 @@ public class PlayerController : MonoBehaviour
     private List<Collider> FilterOnFacing(List<Collider> colliders, Vector3 target, Vector3 forward)
     {
         return colliders.Where(x =>
-            Vector3.Dot((x.gameObject.transform.position - target).normalized, forward) > 0.2f
+            Vector3.Dot((x.gameObject.transform.position - target).normalized, forward) > 0.7f
         ).ToList();
     }
 
@@ -180,13 +190,12 @@ public class PlayerController : MonoBehaviour
             {
                 Vector3 directionToTarget = lockedOnTarget.transform.position - transform.position;
                 directionToTarget.y = 0;
-                Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10 * Time.deltaTime);
+
+                SetRotation(Quaternion.LookRotation(directionToTarget));
             }
             else 
             {
-                Quaternion targetRotation = Quaternion.LookRotation(averageTargetPosition);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10 * Time.deltaTime);
+                SetRotation(Quaternion.LookRotation(averageTargetPosition));
             }
 
             // set position
@@ -195,11 +204,16 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void SetRotation(Quaternion targetQuaternion) 
+    {
+        this.targetQuaternion = targetQuaternion; 
+
+        transform.rotation = Quaternion.Slerp(transform.rotation, targetQuaternion, 10 * Time.deltaTime);
+    }
+
     private Vector3 GetInput()
     {
         Vector3 input = new Vector3(Input.GetAxisRaw("Horizontal"), 0, Input.GetAxisRaw("Vertical"));
-
-        //print(inputActionReference.action.ReadValue<Vector2>());
 
         // Normalize input to prevent diagonal values (only for non-controller inputs)
         if (Math.Abs(input.x) == 1 || Math.Abs(input.z) == 1)
