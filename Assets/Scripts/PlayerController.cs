@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -9,7 +11,7 @@ public class PlayerController : MonoBehaviour
      * Constants
      */
     const int MOVEMENT_SPEED = 2;
-    const int FOCUS_RANGE = 30;
+    const int FOCUS_RANGE = 60;
 
     /**
      * References
@@ -42,50 +44,14 @@ public class PlayerController : MonoBehaviour
 
     }
 
-    private enum AxisStatus 
-    {
-        Down,
-        Pressed,
-        Released,
-        Idle
-    }
-
-    private bool isBumperPressed = false;
-
-    private AxisStatus GetAxisStatus(string axis) 
-    {
-        if (Input.GetAxisRaw(axis) != 0)
-        {
-            if (!isBumperPressed)
-            {
-                isBumperPressed = true;
-                return AxisStatus.Pressed;
-            }
-            else
-            {
-                return AxisStatus.Down;
-            }
-        }
-        else 
-        {
-            if (isBumperPressed)
-            {
-                isBumperPressed = false;
-                return AxisStatus.Released;
-            }
-        }
-        return AxisStatus.Idle;
-    } 
-
     private void Update()
     {
-        var bumper = GetAxisStatus("Bumper");
+        var targetLock = GameButton.GetStatus(GameButton.Command.TargetLock);
 
-        if (bumper == AxisStatus.Pressed)
+        if (targetLock == GameButton.Status.Pressed)
         {
             List<Collider> colliders = Physics.OverlapSphere(transform.position, FOCUS_RANGE)
-                .ToList()
-                .Where(x => x.gameObject.tag != "Player" && x.gameObject.tag != "Terrain")
+                .Where(x => x.gameObject.tag == "Enemy")
                 .ToList();
 
             var objectsFacingPlayer = FilterOnFacing(colliders, transform.position, this.targetQuaternion * Vector3.forward);
@@ -103,12 +69,12 @@ public class PlayerController : MonoBehaviour
             }       
         }
 
-        if (bumper == AxisStatus.Released)
+        if (targetLock == GameButton.Status.Released)
         {
             DeselectLockedOnTarget();
         }
 
-        if (bumper == AxisStatus.Down)
+        if (targetLock == GameButton.Status.Down)
         {
             if (lockedOnTarget != null)
             {
@@ -124,10 +90,35 @@ public class PlayerController : MonoBehaviour
                 SetRotation(Quaternion.LookRotation(directionToTarget));
             }
         }
+
+        if (lockedOnTarget != null) 
+        {
+            // find target closest in the direction of the right thumb stick
+            Vector3 input = new Vector3(Input.GetAxisRaw("Right Thumb Horizontal"), 0, Input.GetAxisRaw("Right Thumb Vertical"));
+            if (input != Vector3.zero)
+            {
+                List<Collider> colliders = Physics.OverlapSphere(transform.position, FOCUS_RANGE)
+                .Where(x => x.gameObject.tag == "Enemy")
+                .ToList();
+
+                var target = FilterOnFacing(colliders, transform.position, input)
+                            .FirstOrDefault()?.gameObject;
+
+                if (target != null)
+                {
+                    SelectLockedOnTarget(target);
+                }
+            }
+        }
     }
 
     private void SelectLockedOnTarget(GameObject gameObject) 
     {
+        if (lockedOnTarget != null) 
+        {
+            DeselectLockedOnTarget();
+        }
+
         lockedOnTarget = gameObject;
 
         lockedOnIndicator = Instantiate(uiTargetIndicator, lockedOnTarget.transform);
@@ -183,7 +174,7 @@ public class PlayerController : MonoBehaviour
         if (input != Vector3.zero) 
         {
             // take the average of the last couple of inputs
-            var averageTargetPosition = CalculateAverageVector(inputHistory);
+            var averageTargetPosition = VectorMath.CalculateAverageVector(inputHistory);
 
             // set rotation         
             if (lockedOnTarget != null)
@@ -222,7 +213,7 @@ public class PlayerController : MonoBehaviour
         }
 
         input = ApplyInputThreshold(input);
-        input = ToIso(input);
+        input = VectorMath.ToIso(input);
         return input;
     }
 
@@ -240,19 +231,5 @@ public class PlayerController : MonoBehaviour
         float mappedMagnitude = Mathf.InverseLerp(INPUT_THRESHOLD, 1f, input.magnitude);
         // Return normalized vector with the new magnitude
         return mappedMagnitude * input.normalized;
-    }
-
-    private Vector3 ToIso(Vector3 input) 
-    {
-        return Quaternion.Euler(0, 45f, 0) * input;
-    }
-
-    private Vector3 CalculateAverageVector(List<Vector3> input)
-    {
-        return new Vector3(
-            input.Average(vector => vector.x),
-            input.Average(vector => vector.y),
-            input.Average(vector => vector.z)
-        );
     }
 }
