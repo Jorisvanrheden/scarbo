@@ -5,12 +5,16 @@ public class BounceController : MonoBehaviour
     public float bounceHeight = 0.1f; 
     public float bounceSpeed = 10f; 
 
-    private float initialPositionY;
     private float counter = 0;
 
-    void Start()
+    private Transform parentTransform;
+    private float initialOffsetY;
+
+    private void Awake()
     {
-        initialPositionY = transform.position.y;
+        parentTransform = transform.root;
+
+        initialOffsetY = transform.position.y - parentTransform.position.y;
     }
 
     void Update()
@@ -18,9 +22,9 @@ public class BounceController : MonoBehaviour
         counter += bounceSpeed * Time.deltaTime;
 
         transform.position = new Vector3(
-            transform.position.x,
-            initialPositionY + bounceHeight * Mathf.Sin(counter),
-            transform.position.z
+            parentTransform.position.x,
+            initialOffsetY + parentTransform.position.y + bounceHeight * Mathf.Sin(counter),
+            parentTransform.position.z
         );
     }
 }
