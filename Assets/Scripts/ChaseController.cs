@@ -22,6 +22,6 @@ public class ChaseController : MonoBehaviour
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10 * Time.deltaTime);
 
         // set position
-        //rb.MovePosition(transform.position + transform.forward * 0.5f * Time.deltaTime);
+        rb.MovePosition(transform.position + transform.forward * 0.5f * Time.deltaTime);
     }
 }
