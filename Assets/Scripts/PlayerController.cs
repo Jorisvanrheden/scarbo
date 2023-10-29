@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class PlayerController : MonoBehaviour
 {
@@ -36,12 +34,6 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
-    }
-
-    // Start is called before the first frame update
-    void Start()
-    {
-
     }
 
     private void Update()
@@ -88,26 +80,6 @@ public class PlayerController : MonoBehaviour
                 directionToTarget.y = 0;
 
                 SetRotation(Quaternion.LookRotation(directionToTarget));
-            }
-        }
-
-        if (lockedOnTarget != null) 
-        {
-            // find target closest in the direction of the right thumb stick
-            Vector3 input = new Vector3(Input.GetAxisRaw("Right Thumb Horizontal"), 0, Input.GetAxisRaw("Right Thumb Vertical"));
-            if (input != Vector3.zero)
-            {
-                List<Collider> colliders = Physics.OverlapSphere(transform.position, FOCUS_RANGE)
-                .Where(x => x.gameObject.tag == "Enemy")
-                .ToList();
-
-                var target = FilterOnFacing(colliders, transform.position, input)
-                            .FirstOrDefault()?.gameObject;
-
-                if (target != null)
-                {
-                    SelectLockedOnTarget(target);
-                }
             }
         }
     }
