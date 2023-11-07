@@ -92,7 +92,6 @@ public class PlayerController : MonoBehaviour
         }
 
         lockedOnTarget = gameObject;
-
         lockedOnIndicator = Instantiate(uiTargetIndicator, gameObject.transform, false);
     }
     private void DeselectLockedOnTarget()

@@ -13,8 +13,7 @@ public class BounceController : MonoBehaviour
     private void Awake()
     {
         parentTransform = transform.root;
-
-        initialOffsetY = transform.position.y - parentTransform.position.y;
+        initialOffsetY = transform.position.y - parentTransform.position.y + MeshMethods.GetMeshTopYPosition(parentTransform);
     }
 
     void Update()

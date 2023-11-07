@@ -43,6 +43,7 @@ public class WalkController : MonoBehaviour
                     if (waypointIndex >= waypoints.Count) waypointIndex = 0;
 
                     state = State.Stopping;
+                    break;
                 }
 
                 Vector3 directionToTarget = waypoints[waypointIndex] - transform.position;
