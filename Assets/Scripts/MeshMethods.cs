@@ -7,7 +7,7 @@ public static class MeshMethods
 {
     public static float GetMeshTopYPosition(Transform transform)
     {
-        Ray ray = new Ray(transform.position + Vector3.up * 2f, Vector3.down);
+        Ray ray = new Ray(transform.position + Vector3.up * 20f, Vector3.down);
         RaycastHit hit;
 
         // Check if the ray hits any collider

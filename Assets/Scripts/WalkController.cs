@@ -5,6 +5,8 @@ public class WalkController : MonoBehaviour
 {
     private Rigidbody rb;
 
+    private Animator animator;
+
     private List<Vector3> waypoints;
     private int waypointIndex = 0;
     private const int WAYPOINT_DISTANCE = 2;
@@ -15,12 +17,13 @@ public class WalkController : MonoBehaviour
         Stopping
     }
     private State state = State.Stopping;
-    private const float STOP_DURATION = 1f; // seconds;
+    private const float STOP_DURATION = 3f; // seconds;
     private float currentStopDuration = 0f;
 
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        animator = GetComponentInChildren<Animator>();
 
         waypoints = new List<Vector3>() 
         {
@@ -37,17 +40,19 @@ public class WalkController : MonoBehaviour
         switch (state) 
         {
             case State.Walking:
-                if (Vector3.Distance(waypoints[waypointIndex], transform.position) < 0.1f)
+                if (Vector3.Distance(waypoints[waypointIndex].ExcludingYComponent(), transform.position.ExcludingYComponent()) < 0.1f)
                 {
                     waypointIndex++;
                     if (waypointIndex >= waypoints.Count) waypointIndex = 0;
 
                     state = State.Stopping;
+                    animator.SetTrigger("Idle");
+
                     break;
                 }
 
                 Vector3 directionToTarget = waypoints[waypointIndex] - transform.position;
-                Quaternion targetRotation = Quaternion.LookRotation(directionToTarget);
+                Quaternion targetRotation = Quaternion.LookRotation(directionToTarget.ExcludingYComponent());
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, 10 * Time.deltaTime);
 
                 // set position
@@ -59,6 +64,8 @@ public class WalkController : MonoBehaviour
                 {
                     currentStopDuration = 0;
                     state = State.Walking;
+
+                    animator.SetTrigger("Walk");
                 }
                 break;
         }      
